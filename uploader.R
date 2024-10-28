@@ -1,13 +1,17 @@
-library(worldfootballR)
-library(tidyverse)
-library(googlesheets4)
+suppressMessages(library(worldfootballR))
+suppressMessages(library(tidyverse))
+suppressMessages(library(googlesheets4))
+suppressWarnings(suppressMessages(library(logger)))
 
-team_mapping <- read_csv("/Users/ben/Desktop/Code/efl-prediction-game/team-mapping.csv")
+team_mapping <- suppressMessages(read_csv("/Users/ben/Desktop/Code/efl-prediction-game/team-mapping.csv"))
 
-match_results <- worldfootballR::load_match_results(country = "ENG",
+match_results <- suppressMessages(worldfootballR::load_match_results(country = "ENG",
                                    gender = "M",
                                    season_end_year = 2025, 
-                                   tier = "2nd")
+                                   tier = "2nd"))
+
+logger::log_info("Successfully accessed match data from worldfootballR API.")
+
 team_games <- match_results %>%
   pivot_longer(c(Home,Away), names_to = "location", values_to = "team") %>%
   mutate(goals_for = ifelse(location == "Home", HomeGoals, AwayGoals),
@@ -22,6 +26,15 @@ team_games <- match_results %>%
   )) %>%
   filter(Date <= Sys.Date() & !is.na(goals_for)) %>%
   select(team, location, goals_for, goals_against, xg_for, xg_against, points_won)
+
+last_match <- match_results %>%
+  filter(!is.na(HomeGoals)) %>%
+  arrange(desc(Date), desc(Time)) %>%
+  head(1)
+
+last_match_str <- glue::glue("Most recent match: {last_match$Home} {last_match$HomeGoals} vs. {last_match$Away} {last_match$AwayGoals} on {last_match$Day} {last_match$Date}")
+
+logger::log_info(last_match_str)
 
 team_results <- team_games %>%
   group_by(team) %>%
@@ -39,9 +52,9 @@ team_results <- team_games %>%
 sheet_url = "https://docs.google.com/spreadsheets/d/1otcoW54G-rZu1hQoX7KAUGgkR0WcrPJgMgqqzKgv0mM/edit?gid=62777184#gid=62777184"
 tab = "rawtable"
 
-write_sheet(data = team_results,
-            ss = sheet_url,
-            sheet = tab)
+suppressMessages(write_sheet(data = team_results, ss = sheet_url, sheet = tab))
+
+logger::log_info("Successfully uploaded table to Google Sheets.")
 
 ## This code schedules a cronjob for the uploader.R R script when run on Mac.
 
