@@ -1,0 +1,1 @@
+This folder contains `uploader.R`, an R file which scrapes & uploads up-to-date English Football League Championship data to an associated Google Sheet using the `worldfootballR` and `googlesheets4` packages.
